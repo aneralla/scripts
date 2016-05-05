@@ -11,21 +11,24 @@ len=`cat /tmp/log | wc -l`
 
 a=1
 
+
 while [ $a -le $len ]
 do
 
+>post.json
 
-   x=`cat /tmp/log | awk '{FS=" "; print $12}' | head -$a`
-   url_$a=$x 
-   resp_$a=`cat /tmp/log | awk '{FS=" "; print $14}'| head -$a`
-   stack_$a='appletv'
+   x=`cat /tmp/log | awk '{FS=" "; print $12}' | head -$a| tail -1`
+   url=$x
+   resp=`cat /tmp/log | awk '{FS=" "; print $14}'| head -$a | tail -1`
+   stack='appletv'
    a=`expr $a + 1`
-   
-   echo "{" >> /tmp/post
-   echo "\"url\":\"$url_$a\"," >> /tmp/post
-   echo "\"http_response_code\":\"$resp_$a\"," >> /tmp/post
-   echo "\"stack\":\"$stack_$a\"" >> /tmp/post
 
+   echo "{" >> post.json
+   echo "\"url\":\"$url\"," >> post.json
+   echo "\"http_response_code\":\"$resp\"," >> post.json
+   echo "\"stack\":\"$stack\"" >> post.json
+   echo "}" >> post.json
+
+curl -v -X POST "http://ec2-54-86-253-113.compute-1.amazonaws.com/write.php" -d @post.json
 
 done
-
