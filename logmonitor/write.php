@@ -25,6 +25,7 @@ try {
 
         $url=$obj["url"];
         $stack=$obj["stack"];
+        $env=$obj["env"];
         $http_response_code=$obj["http_response_code"];
         $time=$obj["time"];
 
