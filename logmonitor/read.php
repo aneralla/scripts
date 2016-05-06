@@ -24,6 +24,7 @@ try {
             echo 'url: ' . $obj['url'] . "\n";
             echo 'http_response_code: ' . $obj['http_response_code'] . "\n";
             echo 'Stack: ' . $obj['stack'] . "\n";
+	    echo 'Env: ' . $obj['env'] . "\n";
 	    echo 'Time: ' . $obj['time'] . "\n";
             echo "\n";
         }

@@ -1,6 +1,6 @@
 <?php
 
-$bypass = $_GET["secret"]; ## Secret door
+//$bypass = $_GET["secret"]; ## Secret door
 
 //if ($bypass != "lumberjack") {
  //               header('Content-Type: application/json');
@@ -35,6 +35,7 @@ try {
                         'url' => $url,
                         'http_response_code' => $http_response_code,
                         'stack' => $stack,
+                        'env' => $env, 
                         'time'  => $time
   			);
 
