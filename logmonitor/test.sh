@@ -1,5 +1,5 @@
 
-st.json
+>post.json
 
 awk -vDate=`date -d'now-30 minutes' +[%d/%b/%Y:%H:%M:%S` '$7 > Date {print Date, $0}' /var/log/httpd/dev-appletv.ott.aetnd.com_access.log | grep -v "200" > /tmp/log
 len=`cat /tmp/log | wc -l`
