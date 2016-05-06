@@ -1,4 +1,6 @@
-der('Content-type: application/json');
+<?php
+
+header('Content-type: application/json');
 
 try {
     // a new MongoDB connection
