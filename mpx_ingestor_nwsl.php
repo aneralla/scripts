@@ -1,9 +1,5 @@
 <?php
 
-// Script to generate IBM Watson Keywords, Concepts, Categories and Entities, alongwith emotions and sentiments, using the the text stored in Mongo for HISTORY TOPICS.
-// Author: Abhishek Neralla
-// Date: 11/13/2017
-// Version: 1
 
 
 
@@ -101,7 +97,7 @@ function getTeamName($guid){
 
     //$topics = file_get_contents('history-topics.json');
     // $ss_data = json_decode(file_get_contents('http://d2x8k3ml6asc4u.cloudfront.net/videos/'), true);
-    $ss_data = json_decode(utf8_encode(file_get_contents('./all_videos.json')), true);
+    $ss_data = json_decode(utf8_encode(file_get_contents('./test.json')), true);
     $ss_response = $ss_data['response'];
 
     //print_r($ss_response);
@@ -123,6 +119,9 @@ $count = 0;
       $matchOptaID = '';
       $SSVideoTag = '';
       $SSIsReplay = '';
+      //$duration = 0.00;
+
+      $duration = $ss['duration']*1000;
       //print_r($ss)."\n";
       //$mediaGUID = $ss['uvid'];
       print("******* Count = ".$count."********\n");
@@ -139,21 +138,47 @@ $count = 0;
         $playerTags = explode(",", $playerTags_tmp);
         //$playerTags = array_map('utf8_encode', $playerTags_tmp_arr);
 
-        print("Player Tags: \n");
-        print_r($playerTags)."\n";
+        // print("Player Tags: \n");
+        // print_r($playerTags)."\n";
       } else {
         $awayTeam = 'na';
         $homeTeam = 'na';
       }
       if ($ss['metadata']['is_replay']){
         $SSIsReplay = $ss['metadata']['is_replay'];
-        if ($ss['metadata']['is_replay'] == 'true'){
-          $categories = [array('name' => "Game")];
-        }
+        // if ($ss['metadata']['is_replay'] == 'true'){
+        //   $categories = [array('name' => "Game")];
+        // }
 
       }
+
+      $ss_data_vod = json_decode(utf8_encode(file_get_contents('http://mm.api.simplestream.com/vod/vod/get-single-vod?key=0Yo5Cr2Pb9Yu7Wp1Gp0Xg9Cw5Tz5Qh&uvid='.$ss['uvid'])), true);
+      // print("SS_DATA_VOD IS: \n");
+      // print_r($ss_data_vod)."\n";
+
+      //$categories = $ss_data_vod['result']['vod']['categories'][0]['name'];
+      // print("Categories are: \n");
+      // print_r($categories);
+
       $description = $ss['description'];
-      //$categories = [array('name' => "Game")];
+      $categories = [array('name' => $ss_data_vod['result']['vod']['categories'][0]['name'])];
+
+      $source_media_bitrates = $ss_data_vod['result']['vod']['streams']['encodings'];
+      //print_r($source_media_bitrates)."\n";
+      $highest_bitrate = 0;
+      foreach ($source_media_bitrates as $bitrates) {
+        $rate = $bitrates['bitrate'];
+        $source = $bitrates['links']['mp4'];
+        if ($rate > $highest_bitrate) {
+          $highest_bitrate = $rate;
+          $highest_bitrate_source = $source;
+          # code...
+        }
+      }
+      print("Highest bitrate is: ").$highest_bitrate."\n";
+      print("Highest bitrate source is: ").$highest_bitrate_source."\n";
+      print("Highest bitrate filename is: ").basename($highest_bitrate_source)."\n";
+
 
 
       if ($ss['metadata']['match_id']){
@@ -189,6 +214,8 @@ $count = 0;
 
       ));
 
+
+
       //print("Post data : \n");
       //print_r($post_data_mediaObject);
 
@@ -202,7 +229,11 @@ $count = 0;
 
       $post_data_mediaFile_m3u = json_encode(array('linkNewFile' => array('mediaId' => $media_id_created,
           'sourceUrl' => $media_streaming_url,
-          'mediaFileInfo' => array('format' => 'M3U', 'contentType' => 'Video', 'transferInfo' => array('supportsStreaming' => 'true')))));
+          'mediaFileInfo' => array('format' => 'M3U', 'duration' => $duration, 'contentType' => 'Video', 'transferInfo' => array('supportsStreaming' => 'true')))));
+
+      $post_data_mediaFile_mp4 = json_encode(array('linkNewFile' => array('mediaId' => $media_id_created,
+              'sourceUrl' => 's3://mezzanines-aetn.s3.amazonaws.com/NWSL_Prod/'.basename($highest_bitrate_source),
+              'mediaFileInfo' => array('format' => 'MPEG4', 'duration' => $duration, 'contentType' => 'Video', 'assetTypes' => array('Primary Mezzanine Video'), 'transferInfo' => array('supportsStreaming' => 'true')))));
 
       $post_data_mediaFile_jpg = json_encode(array('linkNewFile' => array('mediaId' => $media_id_created,
               'sourceUrl' => $media_thumbnail_url,
@@ -210,12 +241,13 @@ $count = 0;
 
       $post_files1 = post_to_mpx($token, $post_data_mediaFile_m3u, "MF");
       $post_files2 = post_to_mpx($token, $post_data_mediaFile_jpg, "MF");
+      $post_files3 = post_to_mpx($token, $post_data_mediaFile_mp4, "MF");
 
       /// ***** PUBLISHING *****
 
-      $profile_id = 'http://data.publish.theplatform.com/publish/data/PublishProfile/28099562';
+      $profile_id = 'http://data.publish.theplatform.com/publish/data/PublishProfile/28247630';
 
-      $publish_url = 'http://publish.theplatform.com/web/Publish/publish?_mediaId='.$media_id_created.'&_profileId='.$profile_id.'&schema=1.2&token='.$token.'&account=http%3A%2F%2Faccess.auth.theplatform.com%2Fdata%2FAccount%2F2703446663&form=json';
+      $publish_url = 'http://publish.theplatform.com/web/Publish/publish?_mediaId='.$media_id_created.'&_profileId='.$profile_id.'&schema=1.2&token='.$token.'&account=http%3A%2F%2Faccess.auth.theplatform.com%2Fdata%2FAccount%2F2703446073&form=json';
 
       $pub = file_get_contents($publish_url);
       //print("Result of Publish is: ".$pub."\n");
@@ -228,114 +260,6 @@ $count = 0;
       // }
 
       }
-
-
-
-
-
-
-
-
-
-    // foreach($ss_response as $key => $value) {
-    //     print "$key => $value\n";
-    // }
-    // echo "\n";
-      // $media_id = $ss['featured_video'];
-      // $title = $ss['title'];
-      // print ("Topic is: ").$title."\n";
-      //$content = strip_tags($ss['content']);
-      //print ("Content is: \n");
-      //print $content;
-
-
-  //     $post_data = json_encode(array('text' => $content,
-  //     'features' => array('entities' => array('sentiment' => true, 'emotion' => true),
-  //     'emotion' => array('document' => true),
-  //     'sentiment' => array('document' => true),
-  //     'concepts' => array('document' => true),
-  //     'categories' => array('document' => true),
-  //     'keywords' => array('sentiment' => true, 'emotion' => true, 'limit' => 20)))
-  //   );
-  //
-  // ##### POSTING TEXT RETRIEVED ABOVE TO WATSON ####
-  //
-  //
-  // $url = "https://gateway.watsonplatform.net/natural-language-understanding/api/v1/analyze?version=2017-02-27";
-  //
-  //
-  // $ch = curl_init($url);
-  //
-  //
-  // curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-  // curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
-  // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-  // curl_setopt($ch, CURLOPT_USERPWD, "$bluemix_username:$bluemix_password");
-  // curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-  //   'Content-Type: application/json',
-  //   'Content-Length: ' . strlen($post_data))
-  // );
-
-//   $watson_resp = curl_exec($ch);
-//   print "Watson Response is: \n";
-//   print $watson_resp."\n";
-// //   //$watson_resp = file_get_contents('watson_response');
-//   $final_post_data = [];
-//
-//   $watson_resp_arr = json_decode($watson_resp, true);
-//
-//   for ($i = 0; $i < count($watson_resp_arr['keywords']); $i++) {
-//   //for ($i = 0; $i < 2; $i++) {
-//
-//     $final_post_data['keywords'][$i]['text'] = $watson_resp_arr['keywords'][$i]['text'];
-//
-//     $final_post_data['keywords'][$i]['score'] =  $watson_resp_arr['keywords'][$i]['relevance'];
-//     $final_post_data['keywords'][$i]['sentiment'] = $watson_resp_arr['keywords'][$i]['sentiment']['score'];
-//     $final_post_data['keywords'][$i]['emotion']['sadness'] = $watson_resp_arr['keywords'][$i]['emotion']['sadness'];
-//     $final_post_data['keywords'][$i]['emotion']['joy'] = $watson_resp_arr['keywords'][$i]['emotion']['joy'];
-//     $final_post_data['keywords'][$i]['emotion']['fear'] = $watson_resp_arr['keywords'][$i]['emotion']['fear'];
-//     $final_post_data['keywords'][$i]['emotion']['disgust'] = $watson_resp_arr['keywords'][$i]['emotion']['disgust'];
-//     $final_post_data['keywords'][$i]['emotion']['anger'] = $watson_resp_arr['keywords'][$i]['emotion']['anger'];
-//
-//   }
-//
-//   $final_post_data['sentiment'] = $watson_resp_arr['sentiment']['document']['score'];
-//   $final_post_data['emotion']['sadness'] = $watson_resp_arr['emotion']['document']['emotion']['sadness'];
-//   $final_post_data['emotion']['joy'] = $watson_resp_arr['emotion']['document']['emotion']['joy'];
-//   $final_post_data['emotion']['fear'] = $watson_resp_arr['emotion']['document']['emotion']['fear'];
-//   $final_post_data['emotion']['disgust'] = $watson_resp_arr['emotion']['document']['emotion']['disgust'];
-//   $final_post_data['emotion']['anger'] = $watson_resp_arr['emotion']['document']['emotion']['anger'];
-//
-//   for ($i = 0; $i < count($watson_resp_arr['entities']); $i++) {
-//     $final_post_data['entities'][$i]['type'] = $watson_resp_arr['entities'][$i]['type'];
-//     $final_post_data['entities'][$i]['text'] = $watson_resp_arr['entities'][$i]['text'];
-//     $final_post_data['entities'][$i]['score'] = $watson_resp_arr['entities'][$i]['relevance'];
-//     $final_post_data['entities'][$i]['sentiment'] = $watson_resp_arr['entities'][$i]['sentiment']['score'];
-//     $final_post_data['entities'][$i]['emotion']['sadness'] = $watson_resp_arr['entities'][$i]['emotion']['sadness'];
-//     $final_post_data['entities'][$i]['emotion']['joy'] = $watson_resp_arr['entities'][$i]['emotion']['joy'];
-//     $final_post_data['entities'][$i]['emotion']['fear'] = $watson_resp_arr['entities'][$i]['emotion']['fear'];
-//     $final_post_data['entities'][$i]['emotion']['disgust'] = $watson_resp_arr['entities'][$i]['emotion']['disgust'];
-//     $final_post_data['entities'][$i]['emotion']['anger'] = $watson_resp_arr['entities'][$i]['emotion']['anger'];
-//
-//   }
-//
-//   for ($i = 0; $i < count($watson_resp_arr['concepts']); $i++) {
-//     $final_post_data['concepts'][$i]['text'] = $watson_resp_arr['concepts'][$i]['text'];
-//     $final_post_data['concepts'][$i]['score'] = $watson_resp_arr['concepts'][$i]['relevance'];
-//   }
-//
-//   for ($i = 0; $i < count($watson_resp_arr['categories']); $i++) {
-//     $final_post_data['categories'][$i]['text'] = $watson_resp_arr['categories'][$i]['label'];
-//     $final_post_data['categories'][$i]['score'] = $watson_resp_arr['categories'][$i]['score'];
-//   }
-//
-//   $watson_resp = json_encode($final_post_data);
-//   $post_resp = post_to_mpx($media_id, $token, $account, $title, $watson_resp);
-//   print($post_resp);
-//   // break;
-// }
-
-
 
 
 
