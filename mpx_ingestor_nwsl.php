@@ -7,8 +7,8 @@
 
 // *** MPX Access Credentials **//
 
-$username = "abhishek.neralla@aetn.com";
-$password = "Letmein2";
+$username = "xxxxx@xx.com";
+$password = "xxxxxxx";
 
 // ********* //
 
